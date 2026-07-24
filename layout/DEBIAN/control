@@ -1,11 +1,10 @@
 Package: com.ps.letmeblock
 Name: LetMeBlock
-Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 9.0), com.opa334.libsandy
-Version: 1.0.0
-Architecture: iphoneos-arm
-Description: Make mDNSResponder care more about /etc/hosts
+Depends: ellekit | mobilesubstrate, firmware (>= 14.0), com.opa334.libsandy
+Version: 1.3.0
+Architecture: iphoneos-arm64e
+Description: Make mDNSResponder care more about /etc/hosts (RootHide)
 Maintainer: PoomSmart
 Author: PoomSmart
 Section: Tweaks
 Depiction: https://poomsmart.github.io/repo/depictions/letmeblock.html
-SileoDepiction: https://poomsmart.github.io/repo/sileodepictions/letmeblock.json

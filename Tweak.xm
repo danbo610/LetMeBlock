@@ -14,8 +14,19 @@
 #define JETSAM_PRIORITY_CRITICAL 19
 #define JETSAM_MEMORY_LIMIT 512
 #define DEFAULT_HOSTS_PATH "/etc/hosts"
+// Prefer classic rootless path first (user hosts live here on RootHide with /var/jb),
+// then jbroot-mapped paths from ROOT_PATH (works when /var/jb is not present).
+#define ROOTLESS_HOSTS_PATH "/var/jb/etc/hosts"
+#define JBROOT_HOSTS_PATH ROOT_PATH("/etc/hosts")
 #define NEW_HOSTS_PATH ROOT_PATH("/etc/hosts.lmb")
-#define ROOTLESS_NEW_HOSTS_PATH "/var/jb/etc/hosts"
+
+static FILE *openHostsFile(const char *mode) {
+	FILE *r = fopen(ROOTLESS_HOSTS_PATH, mode);
+	if (r) return r;
+	r = fopen(JBROOT_HOSTS_PATH, mode);
+	if (r) return r;
+	return fopen(NEW_HOSTS_PATH, mode);
+}
 
 typedef struct memorystatus_priority_properties {
     int32_t  priority;
@@ -74,13 +85,14 @@ void (*mDNS_StatusCallback)(void *, int) = NULL;
     %orig(arg1, arg2);
 }
 
-// Open UHB's hosts instead of DEFAULT_HOSTS_PATH
-// This new UHB will place all the blocked addresses to NEW_HOSTS_PATH so we won't mess up with the original file
-// If in any cases NEW_HOSTS_PATH got corrupted, we fallback to the original one (DEFAULT_HOSTS_PATH)
+// Redirect /etc/hosts to the jailbreak hosts file (user-editable).
+// Prefer /var/jb/etc/hosts, then jbroot(/etc/hosts), then hosts.lmb; else fall back to stock.
 %hookf(FILE *, fopen, const char *path, const char *mode) {
     if (path && strcmp(path, DEFAULT_HOSTS_PATH) == 0) {
         if (etcHosts) return etcHosts;
-        FILE *r = %orig(ROOTLESS_NEW_HOSTS_PATH, mode);
+        FILE *r = %orig(ROOTLESS_HOSTS_PATH, mode);
+        if (r) return r;
+        r = %orig(JBROOT_HOSTS_PATH, mode);
         if (r) return r;
         r = %orig(NEW_HOSTS_PATH, mode);
         if (r) return r;
@@ -123,8 +135,8 @@ void (*init_helper_service_block_invoke)(id, xpc_object_t);
         // mDNSResponder (_mDNSResponder)
         HBLogDebug(@"LetMeBlock: in mDNSResponder");
         libSandy_applyProfile("LetMeBlock");
-        etcHosts = fopen(ROOTLESS_NEW_HOSTS_PATH, "r");
-        if (etcHosts == NULL) etcHosts = fopen(NEW_HOSTS_PATH, "r");
+        etcHosts = openHostsFile("r");
+        HBLogDebug(@"LetMeBlock: hosts file %s", etcHosts ? "opened" : "MISSING");
         MSImageRef ref = MSGetImageByName("/usr/sbin/mDNSResponder");
         mDNS_StatusCallback = (void (*)(void *, int))_PSFindSymbolCallable(ref, "_mDNS_StatusCallback");
         mDNS_StatusCallback_allocated = (unsigned int *)_PSFindSymbolReadable(ref, "_mDNS_StatusCallback.allocated");
