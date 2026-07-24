@@ -1,7 +1,7 @@
 #import <PSHeader/Misc.h>
 #import <libSandy.h>
 #import <version.h>
-#import <rootless.h>
+#import <roothide.h>
 #import <HBLog.h>
 
 #include <sys/sysctl.h>
@@ -14,18 +14,15 @@
 #define JETSAM_PRIORITY_CRITICAL 19
 #define JETSAM_MEMORY_LIMIT 512
 #define DEFAULT_HOSTS_PATH "/etc/hosts"
-// Prefer classic rootless path first (user hosts live here on RootHide with /var/jb),
-// then jbroot-mapped paths from ROOT_PATH (works when /var/jb is not present).
-#define ROOTLESS_HOSTS_PATH "/var/jb/etc/hosts"
-#define JBROOT_HOSTS_PATH ROOT_PATH("/etc/hosts")
-#define NEW_HOSTS_PATH ROOT_PATH("/etc/hosts.lmb")
 
+// RootHide: never open absolute "/var/jb/etc/hosts" — mDNSResponder cannot resolve
+// that rootless-era path. Always go through jbroot() so the randomized jbroot works.
+// Edit hosts on device at the jbroot etc path (often still reachable via SSH as
+// /var/jb/etc/hosts when a symlink exists, but the process must use jbroot).
 static FILE *openHostsFile(const char *mode) {
-	FILE *r = fopen(ROOTLESS_HOSTS_PATH, mode);
+	FILE *r = fopen(jbroot("/etc/hosts"), mode);
 	if (r) return r;
-	r = fopen(JBROOT_HOSTS_PATH, mode);
-	if (r) return r;
-	return fopen(NEW_HOSTS_PATH, mode);
+	return fopen(jbroot("/etc/hosts.lmb"), mode);
 }
 
 typedef struct memorystatus_priority_properties {
@@ -85,16 +82,13 @@ void (*mDNS_StatusCallback)(void *, int) = NULL;
     %orig(arg1, arg2);
 }
 
-// Redirect /etc/hosts to the jailbreak hosts file (user-editable).
-// Prefer /var/jb/etc/hosts, then jbroot(/etc/hosts), then hosts.lmb; else fall back to stock.
+// Redirect stock /etc/hosts to jbroot hosts (user-editable under the jailbreak root).
 %hookf(FILE *, fopen, const char *path, const char *mode) {
     if (path && strcmp(path, DEFAULT_HOSTS_PATH) == 0) {
         if (etcHosts) return etcHosts;
-        FILE *r = %orig(ROOTLESS_HOSTS_PATH, mode);
+        FILE *r = %orig(jbroot("/etc/hosts"), mode);
         if (r) return r;
-        r = %orig(JBROOT_HOSTS_PATH, mode);
-        if (r) return r;
-        r = %orig(NEW_HOSTS_PATH, mode);
+        r = %orig(jbroot("/etc/hosts.lmb"), mode);
         if (r) return r;
     }
     return %orig(path, mode);

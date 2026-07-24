@@ -1,32 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-    <dict>
-        <key>AllowedProcesses</key>
-        <array>
-            <string>com.apple.mDNSResponder</string>
-        </array>
-        <key>Conditions</key>
-        <array>
-            <dict>
-                <key>ConditionType</key>
-                <string>FileExistance</string>
-                <key>FilePath</key>
-                <string>/var/jb/etc/hosts</string>
-                <key>Negated</key>
-                <true/>
-            </dict>
-        </array>
-        <key>Extensions</key>
-        <array>
-            <dict>
-                <key>type</key>
-                <string>file</string>
-                <key>extension_class</key>
-                <string>com.apple.app-sandbox.read</string>
-                <key>path</key>
-                <string>/var/jb/etc/hosts</string>
-            </dict>
-        </array>
-    </dict>
+<dict>
+	<key>AllowedProcesses</key>
+	<array>
+		<string>com.apple.mDNSResponder</string>
+	</array>
+	<!-- Paths are jbroot-relative logical paths. On RootHide, sandyd maps them via
+	     the current jbrand; do not rely on a real absolute /var/jb symlink. -->
+	<key>Extensions</key>
+	<array>
+		<dict>
+			<key>type</key>
+			<string>file</string>
+			<key>extension_class</key>
+			<string>com.apple.app-sandbox.read</string>
+			<key>path</key>
+			<string>/var/jb/etc/hosts</string>
+		</dict>
+		<dict>
+			<key>type</key>
+			<string>file</string>
+			<key>extension_class</key>
+			<string>com.apple.app-sandbox.read</string>
+			<key>path</key>
+			<string>/var/jb/etc/hosts.lmb</string>
+		</dict>
+	</array>
+</dict>
 </plist>
